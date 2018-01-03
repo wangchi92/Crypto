@@ -772,12 +772,12 @@ class Bittrex(object):
         return self.get_ticker(market)['result']['Last']
 
     def get_total_balance_in_btc(self):
-        print("[Bittrex]\nCalculating total balance in BTC...")
+        # print("[Bittrex]\nCalculating total balance in BTC...")
         total = 0
         balances = self.get_balances()
         for balance in balances['result']:
             if balance['Balance'] > 0:
-                print(balance['Currency'] + ': ' + str(balance['Balance']))
+                # print(balance['Currency'] + ': ' + str(balance['Balance']))
                 if not 'BTC' in balance['Currency']:
                     market = 'BTC-' + balance['Currency']
                     total += self.get_latest_price(market) * balance['Balance']
@@ -785,7 +785,7 @@ class Bittrex(object):
                     total += balance['Balance']
 
         self.total_balance_in_btc = total
-        print('Total BTC = ' + str(total))
+        #print('Total BTC = ' + str(total))
         return total
 
     def get_total_balance_in_usd(self):
@@ -795,10 +795,10 @@ class Bittrex(object):
             total = self.total_balance_in_btc * btc_price
         else:
             total = self.get_total_balance_in_btc() * btc_price
-        print('Total USD = ' + str(total))
+        #print('Total USD = ' + str(total))
         return total
 
     def get_btc_price(self):
         btc_price = self.get_latest_price(market='USDT-BTC')
-        print('1BTC = ' + str(btc_price) + 'USDT')
+        #print('1BTC = ' + str(btc_price) + 'USDT')
         return btc_price
