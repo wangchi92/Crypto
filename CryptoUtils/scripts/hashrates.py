@@ -1,0 +1,6 @@
+TIMETRAVEL = 15  # MH/s
+LBRY = 270  # MH/s
+EQUIHASH = 0.375  # kSol/s
+CRYPTONIGHT = 600  # H/s
+BLAKE2B = 1500  # MH/s
+ETHASH = 30  # MH/s
