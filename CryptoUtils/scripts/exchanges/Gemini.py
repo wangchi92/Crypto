@@ -1,53 +1,41 @@
+"""
+   See https://docs.gemini.com/rest-api/
+"""
+
 import base64
 import hashlib
 import hmac
 import json
-import time
 
-import requests
+from exchanges.AbcExchange import AbcExchange, PROTECTION_PUB, PROTECTION_PRV
 
-
-def build_headers(api_key, payload, signature):
-    return {
-        'Content-Type': "text/plain",
-        'Content-Length': "0",
-        'X-GEMINI-APIKEY': api_key,
-        'X-GEMINI-PAYLOAD': payload,
-        'X-GEMINI-SIGNATURE': signature,
-        'Cache-Control': "no-cache"
-    }
+BASE_URL = 'https://api.gemini.com'
 
 
-def using_requests(method, url, headers):
-    return requests.request(method, url, headers=headers).json()
+class Gemini(AbcExchange):
 
+    @property
+    def _base_url(self):
+        return BASE_URL
 
-class Gemini(object):
-
-    def __init__(self, api_key, api_secret, dispatch=using_requests):
-        self.api_key = str(api_key) if api_key is not None else ''
-        self.api_secret = str(api_secret) if api_secret is not None else ''
-        self.dispatch = dispatch
-        self.last_call = None
-        self.total_balance_in_btc = -1
-        self.nonce = int(time.time() * 1000)
-
-        self.balances = None
-
-    def _api_query(self, method, url, protection='private'):
-        url = '/v1' + url
-        b64 = base64.b64encode(json.dumps({
-            "request": url,
+    def _build_headers(self, **kwargs):
+        payload = base64.b64encode(json.dumps({
+            "request": '/v1' + kwargs['url'],
             "nonce": self.nonce
-        }).encode('utf-8')
-                               )
-        ++(self.nonce)
+        }).encode()
+                                   )
+        signature = hmac.new(self.api_secret.encode(), payload, hashlib.sha384).hexdigest()
+        return {
+            'Content-Type': "text/plain",
+            'Content-Length': "0",
+            'X-GEMINI-APIKEY': self.api_key,
+            'X-GEMINI-PAYLOAD': payload,
+            'X-GEMINI-SIGNATURE': signature,
+            'Cache-Control': "no-cache"
+        }
 
-        headers = None
-        if protection is 'private':
-            signature = hmac.new(self.api_secret.encode(), b64, hashlib.sha384).hexdigest()
-            headers = build_headers(self.api_key, b64, signature)
-        return self.dispatch(method, 'https://api.gemini.com' + url, headers)
+    def _build_full_url(self, **kwargs):
+        return self._base_url + '/v1' + kwargs['url']
 
     def get_ticker(self, currency):
         url = '/pubticker/' + currency + 'usd'
