@@ -298,7 +298,7 @@ class Bittrex(AbcExchange):
             #API_V2_0: '/key/market/getopenorders'
         }, options={'market': market, 'marketname': market} if market else None, protection=PROTECTION_PRV)
 
-    def get_balances(self):
+    def _request_get_balances(self):
         """
         Used to retrieve all balances from your account.
         Endpoint:
@@ -682,12 +682,21 @@ class Bittrex(AbcExchange):
             'marketName': market, 'tickInterval': tick_interval
         }, protection=PROTECTION_PUB)
 
-    def get_latest_price(self, market):
-        return self.get_ticker(market)['result']['Last']
+    def get_price(self, currency, denom):
+        market = denom.upper() + '-' + currency.upper()
+        return float(self.get_ticker(market)['result']['Last'])
+
+    def get_balances(self):
+        if self.balances is None:
+            self.balances = dict()
+            for balance in self._request_get_balances()['result']:
+                if balance['Balance'] > 0:
+                    self.balances[balance['Currency'].lower()] = float(balance['Balance'])
+        return self.balances
 
     def get_total_balance_in_btc(self):
         # print("[Bittrex]\nCalculating total balance in BTC...")
-        total = 0
+        total = 0.0
         balances = self.get_balances()
         for balance in balances['result']:
             if balance['Balance'] > 0:
@@ -704,7 +713,7 @@ class Bittrex(AbcExchange):
 
     def get_total_balance_in_usd(self):
         btc_price = self.get_btc_price()
-        total = 0
+        total = 0.0
         if self.total_balance_in_btc is not -1:
             total = self.total_balance_in_btc * btc_price
         else:

@@ -1,6 +1,7 @@
 from abc import *
 import requests
 import time
+import json
 
 try:
     from Crypto.Cipher import AES
@@ -31,6 +32,7 @@ PROTECTION_PRV = 'prv'  # authenticated methods
 
 
 class AbcExchange(object):
+    btc_price = 0
 
     def __init__(self, api_key, api_secret, calls_per_second=1):
         self.call_rate = 1.0 / calls_per_second
@@ -48,10 +50,11 @@ class AbcExchange(object):
         pass
 
     @staticmethod
-    def _dispatch(method, request_url, headers):
+    def _dispatch(method, request_url, headers, post_data):
         return requests.request(
             method,
             request_url,
+            data=post_data,
             headers=headers
         ).json()
 
@@ -63,21 +66,40 @@ class AbcExchange(object):
     def _build_full_url(self):
         pass
 
-    def _api_query(self, method="GET", url='', options=None, protection=PROTECTION_PUB):
+    @abstractmethod
+    def get_price(self, currency, denom):
+        """
+        Get the price of a currency.
+        :param currency: coin ticker
+        :param denom: denomination currency - USD or BTC
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_balances(self):
+        """
+        Get all the balances.
+        :return: a dictionary with key = coin ticker lower case, value = balance amount
+        """
+        pass
+
+    def _api_query(self, method="GET", url='', options=None, protection=PROTECTION_PUB, post_data=None):
         ++(self.nonce)
         full_url = self._build_full_url(url=url, options=options, protection=protection)
         headers = None
         if protection is not PROTECTION_PUB:
-            headers = self._build_headers(url=url, full_url=full_url)
+            headers = self._build_headers(url=url, full_url=full_url, post_data=post_data)
         self.wait()
         try:
-            return self._dispatch(method, full_url, headers)
+            response = self._dispatch(method, full_url, headers, post_data)
         except Exception:
             return {
                 'success': False,
                 'message': 'NO_API_RESPONSE',
                 'result': None
             }
+        return response
 
     def decrypt(self):
         if encrypted:

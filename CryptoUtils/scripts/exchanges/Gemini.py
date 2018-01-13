@@ -37,31 +37,44 @@ class Gemini(AbcExchange):
     def _build_full_url(self, **kwargs):
         return self._base_url + '/v1' + kwargs['url']
 
-    def get_ticker(self, currency):
-        url = '/pubticker/' + currency + 'usd'
+    def _request_get_ticker(self, currency, denom):
+        url = '/pubticker/' + currency.upper() + denom.upper()
         return self._api_query("GET", url, protection='public')
 
-    def get_price(self, currency):
-        ticker = self.get_ticker(currency)
-        return ticker["last"]
+    def get_price(self, currency, denom):
+        result = self._request_get_ticker(currency, denom)
+        return float(result['last'])
+
+    def _request_get_balances(self):
+        url = "/balances"
+        return self._api_query("POST", url, protection='private')
 
     def get_balances(self):
         if self.balances is None:
-            url = "/balances"
-            self.balances = self._api_query("POST", url, protection='private')
+            self.balances = dict()
+            for balance in self._request_get_balances():
+                self.balances[balance['currency'].lower()] = float(balance['amount'])
         return self.balances
 
     def get_balance(self, currency):
-        for balance in self.get_balances():
-            if currency in balance['currency']:
-                return balance['amount']
+        return self.get_balances['currency'.lower()]
+
+    def get_total_balance_in_btc(self, verbose=False):
+        total = 0.0
+        for currency, balance in self.get_balances().items():
+            if 'btc' in currency:
+                total += float(balance)
+            elif 'eth' in balance:
+                price = self.get_price(currency, 'btc')
+                total += float(price) * float(balance)
+        return total
 
     def get_total_balance_in_usd(self):
         total = 0
-        for balance in self.get_balances():
-            if 'USD' not in balance['currency']:
-                price = self.get_price(balance['currency'])
-                total += float(price) * float(balance['amount'])
+        for currency, balance in self.get_balances().items():
+            if 'USD' not in currency:
+                price = self.get_price(currency)
+                total += float(price) * float(balance)
             else:
-                total += float(balance['amount'])
+                total += float(balance)
         return total
